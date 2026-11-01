@@ -556,7 +556,6 @@
     let modalBeginFn = null;
     let modalEndFn = null;
     let currentTab = "a";
-    let processListTimer = 0;
     let analyzeMode = "manual";
 
     function blankDoc() {
@@ -1117,24 +1116,6 @@
       return { invalid, files };
     }
 
-    async function refreshProcessFiles(keepCard) {
-      const typed = keepCard ? $("processCode").value : "";
-      const { invalid, files } = await peekProcessFiles();
-      if (invalid.length && !(keepCard && queue.name && invalid.every((f) => f.name !== queue.name))) {
-        $("processEmpty").classList.add("hidden");
-        $("processCard").classList.add("hidden");
-        askInvalid(invalid[0]);
-        return;
-      }
-      if (keepCard && queue.name && files.some((f) => f.name === queue.name)) {
-        if (typed) $("processCode").value = typed;
-        $("processCode").focus();
-        return;
-      }
-      await loadProcess();
-      if (keepCard && typed) $("processCode").value = typed;
-    }
-
     async function loadProcess() {
       const { invalid, files } = await peekProcessFiles();
       if (invalid.length) {
@@ -1308,6 +1289,7 @@
       if (typed && !(await saveCurrentCode(typed))) return;
       queue.idx -= 1;
       $("processMsg").textContent = "";
+      await peekProcessFiles();
       renderProcess();
     }
 
@@ -1319,10 +1301,6 @@
         e.preventDefault();
         processNext();
       }
-    });
-    $("processCode").addEventListener("input", () => {
-      clearTimeout(processListTimer);
-      processListTimer = setTimeout(() => refreshProcessFiles(true), 200);
     });
     document.querySelectorAll(".js-refresh").forEach((btn) => {
       btn.onclick = refreshCurrent;
