@@ -1,0 +1,1503 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>火星文</title>
+  <style>
+    :root {
+      --bg: #141416;
+      --panel: #1e1e22;
+      --bar: #18181c;
+      --line: #33343a;
+      --text: #ececec;
+      --muted: #9a9aa3;
+      --accent: #7eb8ff;
+      --ok: #7dce9a;
+      --bad: #e88;
+      --bar-w: 56px;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+      font: 15px/1.45 "Segoe UI", "Microsoft JhengHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .sidebar {
+      width: var(--bar-w);
+      flex: 0 0 var(--bar-w);
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 0;
+      background: var(--bar);
+      border-right: 1px solid var(--line);
+    }
+    .sidebar .grow { flex: 1; }
+    .sidebar button {
+      width: 40px;
+      height: 40px;
+      padding: 0;
+      display: grid;
+      place-items: center;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      color: var(--muted);
+      cursor: pointer;
+    }
+    .sidebar button:hover { color: var(--text); background: #24242a; }
+    .sidebar button.on {
+      color: var(--accent);
+      border-color: var(--line);
+      background: #24242a;
+    }
+    .sidebar svg { width: 20px; height: 20px; display: block; }
+    .wrap { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+    header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--line);
+    }
+    header h1 { font-size: 18px; margin: 0; font-weight: 600; }
+    .icon-btn {
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      display: grid;
+      place-items: center;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      color: var(--muted);
+      cursor: pointer;
+    }
+    .icon-btn:hover { color: var(--text); background: #24242a; }
+    .icon-btn svg { width: 18px; height: 18px; }
+    .icon-btn.spin svg { animation: spin 0.7s linear infinite; }
+    .panel-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 36px;
+      margin-bottom: 8px;
+    }
+    .panel-head > label { margin: 0; flex: 1; }
+    .panel-head .js-refresh { margin-left: auto; flex: 0 0 auto; }
+    .panel-head .btns { margin-top: 0; }
+    #processCard .btns { justify-content: center; }
+    main { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; }
+    .page { max-width: 920px; width: 100%; margin: 0 auto; padding: 24px; }
+    .page.wide { max-width: 1100px; }
+    #viewDict:not(.hidden) {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    #viewDict > .panel {
+      flex: 1;
+      min-height: 0;
+      margin-bottom: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .panel {
+      position: relative;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 18px;
+      margin-bottom: 16px;
+    }
+    label { display: block; color: var(--muted); font-size: 12px; margin: 10px 0 4px; }
+    input[type="text"], textarea {
+      width: 100%;
+      background: #121214;
+      border: 1px solid var(--line);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font: inherit;
+    }
+    textarea { min-height: 140px; resize: vertical; }
+    .file-field {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #121214;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px 10px;
+      min-height: 42px;
+    }
+    .file-field .msg { margin: 0; }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; }
+    .row > div { flex: 1; min-width: 180px; }
+    .btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; align-items: center; }
+    button.act {
+      background: var(--accent);
+      color: #111;
+      border: 0;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button.ghost, button.danger {
+      background: transparent;
+      border: 1px solid var(--line);
+      color: var(--text);
+      padding: 8px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    button.danger { border-color: #633; color: var(--bad); }
+    button.act:disabled, button.ghost:disabled { opacity: 0.4; cursor: default; }
+    .seg {
+      display: inline-flex;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 4px;
+    }
+    .seg button {
+      background: transparent;
+      border: 0;
+      color: var(--muted);
+      padding: 8px 18px;
+      cursor: pointer;
+      font: inherit;
+    }
+    .seg button.on {
+      background: #24242a;
+      color: var(--accent);
+    }
+    .msg { margin-top: 10px; color: var(--muted); font-size: 13px; }
+    .msg.ok { color: var(--ok); }
+    .msg.bad { color: var(--bad); }
+    .big {
+      font-size: 56px;
+      line-height: 1.2;
+      text-align: center;
+      padding: 24px 8px 8px;
+      letter-spacing: 0.04em;
+    }
+    .progress { text-align: center; color: var(--muted); margin-bottom: 8px; }
+    .hidden { display: none !important; }
+    .list { max-height: 180px; overflow: auto; font-size: 13px; color: var(--muted); }
+    kbd { border: 1px solid var(--line); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+    th { color: var(--muted); font-weight: 500; font-size: 12px; }
+    tr:hover td { background: #24242a; }
+    .mail { width: 100%; }
+    .mail td:first-child, .mail th:first-child { width: 40px; text-align: center; }
+    .chk {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      margin: 0;
+      border: 1.5px solid #5a5a62;
+      border-radius: 5px;
+      background: #121214;
+      cursor: pointer;
+      display: inline-grid;
+      place-content: center;
+      vertical-align: middle;
+    }
+    .chk:hover { border-color: var(--accent); }
+    .chk:checked {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .chk:checked::after {
+      content: "";
+      width: 9px;
+      height: 5px;
+      border: 2px solid #111;
+      border-top: 0;
+      border-right: 0;
+      transform: rotate(-45deg) translate(0, -1px);
+    }
+    .chk:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .add-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; margin-top: 12px; }
+    .switch {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 14px;
+      cursor: pointer;
+      color: var(--text);
+    }
+    .switch input { display: none; }
+    .switch i {
+      width: 40px;
+      height: 22px;
+      border-radius: 11px;
+      background: #333;
+      position: relative;
+      flex: 0 0 40px;
+    }
+    .switch i::after {
+      content: "";
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #ccc;
+      top: 3px;
+      left: 3px;
+      transition: 0.15s;
+    }
+    .switch input:checked + i { background: #3a6ea5; }
+    .switch input:checked + i::after { left: 21px; background: var(--accent); }
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.55);
+      display: grid;
+      place-items: center;
+      z-index: 20;
+    }
+    .modal .panel { min-width: 280px; max-width: 420px; }
+    .modal .panel.wide {
+      min-width: 360px;
+      max-width: 560px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .key-list {
+      height: 320px;
+      overflow-x: hidden;
+      overflow-y: auto;
+      margin: 8px 0 4px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #121214;
+      flex: none;
+    }
+    .key-list label {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      color: var(--text);
+      font-size: 14px;
+      margin: 0;
+      padding: 8px 10px;
+      cursor: pointer;
+    }
+    .key-list label:hover { background: #24242a; }
+    .key-list .key-path { font-family: ui-monospace, Consolas, monospace; word-break: break-all; }
+    .key-list label.special .key-path { font-family: inherit; }
+    .key-list .hint { color: var(--muted); font-size: 12px; margin-top: 2px; }
+    .key-list .chk { margin-top: 2px; }
+    .key-sep { height: 1px; background: var(--line); margin: 4px 0; }
+    .empty { color: var(--muted); padding: 24px 8px; }
+    .file-tag { text-align: center; color: var(--muted); font-size: 13px; }
+    .dict-wrap {
+      position: relative;
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      margin-top: 8px;
+    }
+    #viewDict table thead th {
+      position: sticky;
+      top: 0;
+      background: var(--panel);
+      z-index: 1;
+    }
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid #33343a;
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .dict-loading {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      background: rgba(30, 30, 34, 0.72);
+      z-index: 1;
+    }
+  </style>
+</head>
+<body>
+  <nav class="sidebar" aria-label="功能">
+    <button id="tabAnalyze" class="on" type="button" title="分析" aria-label="分析">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.2-3.2"></path></svg>
+    </button>
+    <button id="tabDict" type="button" title="編碼" aria-label="編碼">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2"></rect><path d="M7 10h.01M11 10h.01M15 10h.01M7 14h10"></path></svg>
+    </button>
+    <button id="tabProcess" type="button" title="處理" aria-label="處理">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4" width="14" height="16" rx="2"></rect><path d="M9 9h6M9 13h6M9 17h4"></path></svg>
+    </button>
+    <button id="tabInbox" type="button" title="待寫入" aria-label="待寫入">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16v12H4z"></path><path d="M4 11h16M9 7V5h6v2"></path></svg>
+    </button>
+    <div class="grow"></div>
+    <button id="tabSettings" type="button" title="設定" aria-label="設定">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H8a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V8c.3.6.9 1 1.5 1.1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg>
+    </button>
+  </nav>
+  <div class="wrap">
+    <header>
+      <h1 id="pageTitle">分析</h1>
+    </header>
+    <main>
+      <section id="viewAnalyze" class="page">
+        <div class="panel">
+          <div class="seg" role="tablist" aria-label="輸入方式">
+            <button type="button" id="modeManual" class="on">手動</button>
+            <button type="button" id="modeImport">匯入</button>
+          </div>
+          <div class="row">
+            <div>
+              <label>來源</label>
+              <input id="source" type="text" placeholder="檔名／備註" />
+            </div>
+            <div>
+              <label>日期</label>
+              <input id="date" type="text" placeholder="YYYY-MM-DD" />
+            </div>
+          </div>
+          <label>原文</label>
+          <textarea id="raw" placeholder="輸入或貼上中文"></textarea>
+          <div id="fileBox" class="file-field hidden">
+            <button class="ghost" type="button" id="btnOpen">瀏覽檔案</button>
+            <span class="msg" id="importName">尚未選擇檔案</span>
+          </div>
+          <input id="filePick" class="hidden" type="file" accept=".json,.xml,.txt,.md,.text,text/plain,application/json,application/xml,text/xml" />
+          <div class="btns">
+            <button class="act" type="button" id="btnAnalyze">分析</button>
+          </div>
+          <div class="msg" id="analyzeMsg"></div>
+          <div class="list" id="extractPreview"></div>
+        </div>
+      </section>
+
+      <section id="viewDict" class="page wide hidden">
+        <div class="panel">
+          <div class="panel-head">
+            <label for="dictFilter">篩選</label>
+            <button class="icon-btn js-refresh" type="button" title="重新整理" aria-label="重新整理">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21 12a9 9 0 1 1-2.3-6"></path>
+                <path d="M21 3v6h-6"></path>
+              </svg>
+            </button>
+          </div>
+          <input id="dictFilter" type="text" placeholder="搜尋詞或編碼" />
+          <div class="msg" id="dictCount"></div>
+          <div class="dict-wrap">
+            <div id="dictLoading" class="dict-loading hidden" aria-label="載入中" role="status">
+              <div class="spinner"></div>
+            </div>
+            <table>
+              <thead><tr><th>詞</th><th>編碼</th></tr></thead>
+              <tbody id="dictBody"></tbody>
+            </table>
+          </div>
+          <div class="add-row">
+            <input id="newWord" type="text" placeholder="詞" />
+            <input id="newCode" type="text" placeholder="編碼" />
+            <button class="act" type="button" id="btnAddPair">新增</button>
+          </div>
+          <div class="msg" id="dictMsg"></div>
+        </div>
+      </section>
+
+      <section id="viewProcess" class="page hidden">
+        <div class="panel" id="processEmpty">
+          <div class="panel-head">
+            <button class="icon-btn js-refresh" type="button" title="重新整理" aria-label="重新整理">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21 12a9 9 0 1 1-2.3-6"></path>
+                <path d="M21 3v6h-6"></path>
+              </svg>
+            </button>
+          </div>
+          <p class="empty">沒有待編碼的檔案。</p>
+        </div>
+        <div class="panel hidden" id="processCard">
+          <div class="panel-head">
+            <button class="icon-btn js-refresh" type="button" title="重新整理" aria-label="重新整理">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21 12a9 9 0 1 1-2.3-6"></path>
+                <path d="M21 3v6h-6"></path>
+              </svg>
+            </button>
+          </div>
+          <div class="file-tag" id="processFile"></div>
+          <div class="file-tag" id="processQueue"></div>
+          <div class="progress" id="processProg"></div>
+          <div class="big" id="processWord"></div>
+          <label>編碼</label>
+          <input id="processCode" type="text" placeholder="例如 fong / room / nei" autocomplete="off" />
+          <div class="btns">
+            <button class="ghost" type="button" id="btnProcessPrev">上一項</button>
+            <button class="ghost" type="button" id="btnProcessSkip">跳過</button>
+            <button class="act" type="button" id="btnProcessNext">下一項</button>
+          </div>
+          <div class="msg" id="processMsg"></div>
+        </div>
+      </section>
+
+      <section id="viewInbox" class="page wide hidden">
+        <div class="panel">
+          <div class="panel-head">
+            <div class="btns">
+              <button class="act" type="button" id="btnImplement">寫入字典</button>
+              <button class="danger" type="button" id="btnDelete">刪除</button>
+            </div>
+            <button class="icon-btn js-refresh" type="button" title="重新整理" aria-label="重新整理">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21 12a9 9 0 1 1-2.3-6"></path>
+                <path d="M21 3v6h-6"></path>
+              </svg>
+            </button>
+          </div>
+          <div class="msg" id="inboxMsg"></div>
+          <table class="mail">
+            <thead>
+              <tr>
+                <th><input id="checkAll" class="chk" type="checkbox" aria-label="全選" /></th>
+                <th>檔案</th><th>來源</th><th>日期</th><th>詞數</th>
+              </tr>
+            </thead>
+            <tbody id="inboxBody"></tbody>
+          </table>
+          <p class="empty hidden" id="inboxEmpty">沒有待寫入的檔案。</p>
+        </div>
+      </section>
+
+      <section id="viewSettings" class="page hidden">
+        <div class="panel">
+          <label for="dictPath">字典檔</label>
+          <input id="dictPath" type="text" spellcheck="false" placeholder="locker.dict.yaml 路徑" />
+          <div class="btns">
+            <button class="act" type="button" id="btnSaveDict">儲存</button>
+            <button class="ghost" type="button" id="btnBrowseDict">瀏覽</button>
+            <button class="ghost" type="button" id="btnDefaultDict">使用預設</button>
+          </div>
+          <div class="msg" id="dictSettingsHint"></div>
+          <label for="workDir">工作資料夾</label>
+          <input id="workDir" type="text" spellcheck="false" placeholder="JSON 檔所在資料夾" />
+          <div class="btns">
+            <button class="act" type="button" id="btnSaveDir">儲存</button>
+            <button class="ghost" type="button" id="btnBrowseDir">瀏覽</button>
+          </div>
+          <label class="switch">
+            <input id="autoImplement" type="checkbox" />
+            <i></i>
+            <span>處理完成後自動寫入字典</span>
+          </label>
+          <label class="switch">
+            <input id="autoRedeploy" type="checkbox" />
+            <i></i>
+            <span>寫入字典後自動重新部署</span>
+          </label>
+          <div class="msg" id="settingsMsg"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <div id="modal" class="modal hidden">
+    <div class="panel">
+      <p id="modalText">確定？</p>
+      <div class="btns">
+        <button class="act" type="button" id="modalOk">確定</button>
+        <button class="danger hidden" type="button" id="modalAlt">清除全部編碼</button>
+        <button class="ghost hidden" type="button" id="modalTrimBegin">從頭刪除超出</button>
+        <button class="ghost hidden" type="button" id="modalTrimEnd">從尾刪除超出</button>
+        <button class="ghost" type="button" id="modalCancel">取消</button>
+      </div>
+    </div>
+  </div>
+  <div id="keyModal" class="modal hidden">
+    <div class="panel wide">
+      <p id="keyModalText">請選擇要當作原文的欄位</p>
+      <div class="key-list" id="keyList"></div>
+      <div class="msg" id="keyModalMsg"></div>
+      <div class="btns">
+        <button class="act" type="button" id="keyOk">確定</button>
+        <button class="ghost" type="button" id="keyCancel">取消</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const titles = { a: "分析", d: "編碼", p: "處理", i: "待寫入", s: "設定" };
+    let filename = "";
+    let doc = blankDoc();
+    let dictEntries = [];
+    let dictWordCount = 0;
+    let settings = { dict_path: "", work_dir: "", auto_implement: true, auto_redeploy: true, default_path: "", known: 0 };
+    let queue = { name: "", doc: null, idx: 0 };
+    let modalFn = null;
+    let modalAltFn = null;
+    let modalBeginFn = null;
+    let modalEndFn = null;
+    let currentTab = "a";
+    let processListTimer = 0;
+    let analyzeMode = "manual";
+
+    function blankDoc() {
+      return {
+        raw_text: "",
+        metadata: {
+          source: "",
+          date: new Date().toISOString().slice(0, 10),
+          extracted: false,
+          extracted_text: [],
+          codes: {},
+          implemented: false,
+        },
+      };
+    }
+
+    function metaOf(d) {
+      if (!d.metadata || typeof d.metadata !== "object") d.metadata = {};
+      const m = d.metadata;
+      m.extracted = !!m.extracted;
+      m.extracted_text = Array.isArray(m.extracted_text) ? m.extracted_text : [];
+      m.codes = m.codes && typeof m.codes === "object" ? m.codes : {};
+      m.implemented = !!m.implemented;
+      delete m.processed;
+      return m;
+    }
+
+    function isComplete(d) {
+      const m = metaOf(d);
+      const texts = m.extracted_text;
+      const codes = m.codes;
+      return texts.length === Object.keys(codes).length && texts.every((t) => codes[t] !== undefined);
+    }
+
+    function show(tab) {
+      currentTab = tab;
+      $("tabAnalyze").classList.toggle("on", tab === "a");
+      $("tabDict").classList.toggle("on", tab === "d");
+      $("tabProcess").classList.toggle("on", tab === "p");
+      $("tabInbox").classList.toggle("on", tab === "i");
+      $("tabSettings").classList.toggle("on", tab === "s");
+      $("viewAnalyze").classList.toggle("hidden", tab !== "a");
+      $("viewDict").classList.toggle("hidden", tab !== "d");
+      $("viewProcess").classList.toggle("hidden", tab !== "p");
+      $("viewInbox").classList.toggle("hidden", tab !== "i");
+      $("viewSettings").classList.toggle("hidden", tab !== "s");
+      $("pageTitle").textContent = titles[tab];
+      if (tab === "d") loadDict();
+      if (tab === "p") loadProcess();
+      if (tab === "i") loadInbox();
+      if (tab === "s") fillSettings();
+    }
+
+    async function refreshCurrent(ev) {
+      const btn = ev && ev.currentTarget;
+      if (btn) btn.classList.add("spin");
+      try {
+        if (currentTab === "d") await loadDict();
+        if (currentTab === "p") await loadProcess();
+        if (currentTab === "i") await loadInbox();
+      } finally {
+        if (btn) btn.classList.remove("spin");
+      }
+    }
+
+    function setAnalyzeMode(mode) {
+      analyzeMode = mode === "import" ? "import" : "manual";
+      $("modeManual").classList.toggle("on", analyzeMode === "manual");
+      $("modeImport").classList.toggle("on", analyzeMode === "import");
+      $("raw").classList.toggle("hidden", analyzeMode !== "manual");
+      $("fileBox").classList.toggle("hidden", analyzeMode !== "import");
+      if (analyzeMode === "manual") toForm();
+    }
+
+    function fromForm() {
+      const m = metaOf(doc);
+      if (analyzeMode === "manual") doc.raw_text = $("raw").value;
+      m.source = $("source").value.trim();
+      m.date = $("date").value.trim() || m.date;
+    }
+
+    function toForm() {
+      const m = metaOf(doc);
+      $("raw").value = doc.raw_text || "";
+      $("source").value = m.source || "";
+      $("date").value = m.date || "";
+    }
+
+    function applySettings(j) {
+      settings = { ...settings, ...j };
+      $("dictPath").value = settings.dict_path || "";
+      $("workDir").value = settings.work_dir || "";
+      $("autoImplement").checked = !!settings.auto_implement;
+      $("autoRedeploy").checked = !!settings.auto_redeploy;
+      $("dictSettingsHint").textContent = j.dict_exists
+        ? `共 ${j.known} 詞 · ${j.pairs} 編碼`
+        : "找不到字典檔";
+    }
+
+    function fillSettings() {
+      $("dictPath").value = settings.dict_path || "";
+      $("workDir").value = settings.work_dir || "";
+      $("autoImplement").checked = !!settings.auto_implement;
+      $("autoRedeploy").checked = !!settings.auto_redeploy;
+    }
+
+    async function loadInfo() {
+      const r = await fetch("/api/info");
+      applySettings(await r.json());
+    }
+
+    $("tabAnalyze").onclick = () => show("a");
+    $("tabDict").onclick = () => show("d");
+    $("tabProcess").onclick = () => show("p");
+    $("tabInbox").onclick = () => show("i");
+    $("tabSettings").onclick = () => show("s");
+    $("modeManual").onclick = () => setAnalyzeMode("manual");
+    $("modeImport").onclick = () => setAnalyzeMode("import");
+    $("btnOpen").onclick = () => $("filePick").click();
+
+    function stripBom(text) {
+      return String(text || "").replace(/^\uFEFF/, "");
+    }
+
+    function extOf(name) {
+      const m = String(name || "").toLowerCase().match(/\.([^.]+)$/);
+      return m ? m[1] : "";
+    }
+
+    function isAppDoc(data) {
+      return !!(
+        data &&
+        typeof data === "object" &&
+        !Array.isArray(data) &&
+        typeof data.raw_text === "string" &&
+        data.metadata &&
+        typeof data.metadata === "object" &&
+        !Array.isArray(data.metadata)
+      );
+    }
+
+    function emptyCatalog() {
+      return { bags: {}, keys: [], paths: [], pairs: [] };
+    }
+
+    function addPair(out, path, value, asField) {
+      const key = path || "(root)";
+      out.pairs.push({ key, value });
+      if (asField) (out.bags[key] || (out.bags[key] = [])).push(value);
+    }
+
+    function walkJson(value, prefix, out) {
+      if (value == null) return;
+      if (typeof value === "string") {
+        addPair(out, prefix, value, true);
+        return;
+      }
+      if (typeof value === "number" || typeof value === "boolean") {
+        addPair(out, prefix, String(value), false);
+        return;
+      }
+      if (Array.isArray(value)) {
+        for (const item of value) walkJson(item, prefix, out);
+        return;
+      }
+      if (typeof value === "object") {
+        for (const [k, v] of Object.entries(value)) {
+          const path = prefix ? prefix + "." + k : k;
+          out.keys.push(k);
+          out.paths.push(path);
+          walkJson(v, path, out);
+        }
+      }
+    }
+
+    function walkXml(node, prefix, out) {
+      if (!node || node.nodeType !== 1) return;
+      const name = node.localName || node.nodeName;
+      const path = prefix ? prefix + "." + name : name;
+      out.keys.push(name);
+      out.paths.push(path);
+      const parts = [];
+      for (const child of node.childNodes) {
+        if (child.nodeType === 3) parts.push(child.nodeValue || "");
+      }
+      const text = parts.join("").trim();
+      if (text) addPair(out, path, text, true);
+      if (node.attributes) {
+        for (const attr of node.attributes) {
+          const val = String(attr.value || "");
+          const ap = path + "." + attr.name;
+          out.keys.push(attr.name);
+          out.paths.push(ap);
+          if (val) addPair(out, ap, val, true);
+        }
+      }
+      for (const child of node.children) walkXml(child, path, out);
+    }
+
+    function isCjk(ch) {
+      const c = ch.codePointAt(0);
+      return (c >= 0x3400 && c <= 0x4dbf) || (c >= 0x4e00 && c <= 0x9fff) || (c >= 0xf900 && c <= 0xfaff);
+    }
+
+    function fieldStats(bags) {
+      return Object.keys(bags)
+        .map((path) => {
+          const vals = bags[path].filter((s) => String(s).trim());
+          let chars = 0;
+          let cjk = 0;
+          let url = 0;
+          let id = 0;
+          for (const s of vals) {
+            chars += s.length;
+            for (const ch of s) {
+              if (isCjk(ch)) cjk += 1;
+            }
+            const t = s.trim();
+            if (/^https?:\/\//i.test(t)) url += 1;
+            else if (/^\d{5,}$/.test(t)) id += 1;
+          }
+          const n = vals.length || 1;
+          return { path, count: vals.length, chars, cjk, urlRatio: url / n, idRatio: id / n };
+        })
+        .filter((row) => row.count > 0)
+        .sort((a, b) =>
+          b.cjk - a.cjk ||
+          a.urlRatio - b.urlRatio ||
+          a.idRatio - b.idRatio ||
+          b.chars - a.chars ||
+          b.count - a.count ||
+          a.path.localeCompare(b.path)
+        );
+    }
+
+    function sniffStructured(name, raw) {
+      const text = stripBom(raw).trim();
+      const ext = extOf(name);
+      if (ext === "json" || text.startsWith("{") || text.startsWith("[")) {
+        try {
+          return { kind: "json", data: JSON.parse(text) };
+        } catch {
+          if (ext === "json" || text.startsWith("{") || text.startsWith("[")) {
+            return { kind: "error", error: "JSON 無效，無法當純文字讀取" };
+          }
+        }
+      }
+      if (ext === "xml" || text.startsWith("<?xml") || (text.startsWith("<") && text.includes(">"))) {
+        const xml = new DOMParser().parseFromString(text, "text/xml");
+        if (xml.querySelector("parsererror")) {
+          if (ext === "xml") return { kind: "error", error: "XML 無效，無法當純文字讀取" };
+        } else {
+          return { kind: "xml", data: xml };
+        }
+      }
+      return { kind: "text", data: stripBom(raw) };
+    }
+
+    let keyPickResolve = null;
+
+    function closeKeyModal(result) {
+      $("keyModal").classList.add("hidden");
+      const fn = keyPickResolve;
+      keyPickResolve = null;
+      if (fn) fn(result);
+    }
+
+    const IMPORT_MODES = [
+      { mode: "both", label: "全部鍵與值" },
+      { mode: "keys", label: "僅全部鍵" },
+      { mode: "values", label: "僅全部值" },
+    ];
+
+    function uniqueList(items) {
+      return [...new Set(items.filter(Boolean))];
+    }
+
+    function syncImportChecks(changed) {
+      const specials = [...document.querySelectorAll("#keyList input[data-mode]")];
+      const fields = [...document.querySelectorAll("#keyList .import-field")];
+      if (changed && changed.dataset.mode) {
+        if (changed.checked) {
+          specials.forEach((el) => { if (el !== changed) el.checked = false; });
+          fields.forEach((el) => { el.checked = false; });
+        }
+        return;
+      }
+      if (changed && changed.classList.contains("import-field") && changed.checked) {
+        specials.forEach((el) => { el.checked = false; });
+      }
+    }
+
+    function askImportKey(rows) {
+      return new Promise((resolve) => {
+        keyPickResolve = resolve;
+        $("keyModalText").textContent = "請選擇要當作原文的欄位";
+        $("keyModalMsg").textContent = "";
+        $("keyModalMsg").className = "msg";
+        const specialHtml = IMPORT_MODES.map((item) =>
+          `<label class="special">
+            <input class="chk" type="checkbox" data-mode="${item.mode}" />
+            <span><div class="key-path">${esc(item.label)}</div></span>
+          </label>`
+        ).join("");
+        const fieldHtml = rows.map((row) =>
+          `<label>
+            <input class="chk import-field" type="checkbox" value="${esc(row.path)}" />
+            <span>
+              <div class="key-path">${esc(row.path)}</div>
+              <div class="hint">${row.count} 項 · ${row.chars} 字${row.cjk ? ` · 中文 ${row.cjk}` : ""}</div>
+            </span>
+          </label>`
+        ).join("");
+        $("keyList").innerHTML = specialHtml + (rows.length ? '<div class="key-sep"></div>' : "") + fieldHtml;
+        $("keyModal").classList.remove("hidden");
+      });
+    }
+
+    $("keyList").addEventListener("change", (e) => {
+      if (e.target && e.target.matches("input[type=checkbox]")) syncImportChecks(e.target);
+    });
+
+    $("keyOk").onclick = () => {
+      const special = document.querySelector("#keyList input[data-mode]:checked");
+      if (special) {
+        closeKeyModal({ mode: special.dataset.mode, paths: [] });
+        return;
+      }
+      const paths = [...document.querySelectorAll("#keyList .import-field:checked")].map((el) => el.value);
+      if (!paths.length) {
+        $("keyModalMsg").textContent = "請至少選一個";
+        $("keyModalMsg").className = "msg bad";
+        return;
+      }
+      closeKeyModal({ mode: null, paths });
+    };
+    $("keyCancel").onclick = () => closeKeyModal(null);
+
+    function importRawText(choice, bags, catalog) {
+      if (choice.mode === "keys") return uniqueList(catalog.paths.length ? catalog.paths : catalog.keys).join("\n");
+      if (choice.mode === "values") {
+        return catalog.pairs.map((p) => p.value).filter((s) => String(s).trim()).join("\n");
+      }
+      if (choice.mode === "both") {
+        return catalog.pairs
+          .filter((p) => String(p.value).trim())
+          .map((p) => `${p.key}\t${p.value}`)
+          .join("\n");
+      }
+      const parts = [];
+      for (const path of choice.paths || []) {
+        for (const s of bags[path] || []) {
+          if (String(s).trim()) parts.push(s);
+        }
+      }
+      return parts.join("\n");
+    }
+
+    function applyImportedDoc(name, loaded) {
+      doc = loaded;
+      metaOf(doc);
+      toForm();
+      $("importName").textContent = name;
+      $("extractPreview").textContent = "";
+      $("analyzeMsg").textContent = "";
+      $("analyzeMsg").className = "msg";
+    }
+
+    async function handlePickedFile(f) {
+      if (!f) return;
+      $("analyzeMsg").textContent = "讀取中…";
+      $("analyzeMsg").className = "msg";
+      const text = await f.text();
+      const stem = f.name.replace(/\.[^.]+$/, "") || f.name;
+      const sniffed = sniffStructured(f.name, text);
+      if (sniffed.kind === "error") {
+        $("analyzeMsg").textContent = sniffed.error;
+        $("analyzeMsg").className = "msg bad";
+        return;
+      }
+      if (sniffed.kind === "json" && isAppDoc(sniffed.data)) {
+        filename = f.name.toLowerCase().endsWith(".json") ? f.name : "";
+        applyImportedDoc(f.name, sniffed.data);
+        return;
+      }
+      const catalog = emptyCatalog();
+      if (sniffed.kind === "json") {
+        walkJson(sniffed.data, "", catalog);
+      } else if (sniffed.kind === "xml") {
+        walkXml(sniffed.data.documentElement, "", catalog);
+      } else {
+        filename = "";
+        const loaded = blankDoc();
+        loaded.raw_text = sniffed.data;
+        loaded.metadata.source = stem;
+        applyImportedDoc(f.name, loaded);
+        return;
+      }
+      const rows = fieldStats(catalog.bags);
+      if (!rows.length && !catalog.paths.length && !catalog.keys.length && !catalog.pairs.length) {
+        $("analyzeMsg").textContent = "沒有可當作原文的文字欄位";
+        $("analyzeMsg").className = "msg bad";
+        return;
+      }
+      $("analyzeMsg").textContent = "";
+      $("analyzeMsg").className = "msg";
+      const picked = await askImportKey(rows);
+      if (!picked) {
+        $("analyzeMsg").textContent = "";
+        $("analyzeMsg").className = "msg";
+        return;
+      }
+      filename = "";
+      const loaded = blankDoc();
+      loaded.raw_text = importRawText(picked, catalog.bags, catalog);
+      loaded.metadata.source = stem;
+      applyImportedDoc(f.name, loaded);
+    }
+
+    $("filePick").onchange = async (e) => {
+      const f = e.target.files[0];
+      e.target.value = "";
+      if (f) await handlePickedFile(f);
+    };
+
+    window.__assignPickedFile = (file) => {
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      $("filePick").files = dt.files;
+      $("filePick").dispatchEvent(new Event("change", { bubbles: true }));
+    };
+
+    $("btnAnalyze").onclick = async () => {
+      fromForm();
+      if (analyzeMode === "import" && !(doc.raw_text || "").trim()) {
+        $("analyzeMsg").textContent = "請先瀏覽檔案";
+        $("analyzeMsg").className = "msg bad";
+        return;
+      }
+      $("analyzeMsg").textContent = "分析中…";
+      $("analyzeMsg").className = "msg";
+      const r = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ document: doc }),
+      });
+      const j = await r.json();
+      if (!r.ok) {
+        $("analyzeMsg").textContent = j.error || "分析失敗";
+        $("analyzeMsg").className = "msg bad";
+        return;
+      }
+      doc = j.document;
+      toForm();
+      const s = await fetch("/api/files/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: filename, document: doc }),
+      });
+      const saved = await s.json();
+      if (!s.ok) {
+        $("analyzeMsg").textContent = saved.error || "儲存失敗";
+        $("analyzeMsg").className = "msg bad";
+        return;
+      }
+      filename = saved.name;
+      $("extractPreview").textContent = metaOf(doc).extracted_text.join(" · ");
+      $("analyzeMsg").textContent = j.missing
+        ? `缺少 ${j.missing} 項（字典 ${j.known} 詞）`
+        : `無需編碼（字典已有全部用字，${j.known} 詞）`;
+      $("analyzeMsg").className = "msg ok";
+    };
+
+    function renderDict(filter) {
+      const q = (filter || "").trim().toLowerCase();
+      const rows = dictEntries.filter((e) => !q || e.word.includes(q) || e.code.toLowerCase().includes(q));
+      $("dictBody").innerHTML = rows.map((e) => `<tr><td>${esc(e.word)}</td><td>${esc(e.code)}</td></tr>`).join("");
+      $("dictCount").textContent = q
+        ? `${rows.length} / ${dictEntries.length} 編碼`
+        : `共 ${dictWordCount} 詞 · ${dictEntries.length} 編碼`;
+    }
+
+    function esc(s) {
+      return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    }
+
+    function redeployNote(j) {
+      if (j.redeployed) return "，已重新部署";
+      if (j.redeploy_error) return `，重新部署失敗：${j.redeploy_error}`;
+      return "";
+    }
+
+    async function loadDict() {
+      $("dictCount").textContent = "";
+      $("dictLoading").classList.remove("hidden");
+      try {
+        const r = await fetch("/api/dict");
+        const j = await r.json();
+        if (!r.ok) {
+          $("dictMsg").textContent = j.error || "載入失敗";
+          $("dictMsg").className = "msg bad";
+          return;
+        }
+        dictEntries = j.entries || [];
+        dictWordCount = j.words || 0;
+        renderDict($("dictFilter").value);
+      } catch (err) {
+        $("dictMsg").textContent = String(err.message || err);
+        $("dictMsg").className = "msg bad";
+      } finally {
+        $("dictLoading").classList.add("hidden");
+      }
+    }
+
+    $("dictFilter").oninput = () => renderDict($("dictFilter").value);
+    $("btnAddPair").onclick = async () => {
+      const word = $("newWord").value.trim();
+      const code = $("newCode").value.trim();
+      if (!word || !code) {
+        $("dictMsg").textContent = "請填詞與編碼";
+        $("dictMsg").className = "msg bad";
+        return;
+      }
+      const r = await fetch("/api/dict/add", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ word, code }),
+      });
+      const j = await r.json();
+      if (!r.ok) {
+        $("dictMsg").textContent = j.error || "新增失敗";
+        $("dictMsg").className = "msg bad";
+        return;
+      }
+      $("newWord").value = "";
+      $("newCode").value = "";
+      $("dictMsg").textContent = (j.count ? `已新增 ${word}` : "字典裡已有這組") + redeployNote(j);
+      $("dictMsg").className = "msg ok";
+      loadDict();
+    };
+
+    function pendingOf(d) {
+      const m = metaOf(d);
+      return m.extracted_text.filter((w) => m.codes[w] === undefined);
+    }
+
+    function setProcessQueueLabel(n) {
+      const el = $("processQueue");
+      if (el) el.textContent = n > 1 ? `佇列還有 ${n} 份` : n === 1 ? "佇列 1 份" : "";
+    }
+
+    async function peekProcessFiles() {
+      const inv = await fetch("/api/files?kind=invalid");
+      const invalid = ((await inv.json()).files || []);
+      const r = await fetch("/api/files?kind=process");
+      const files = ((await r.json()).files || []);
+      setProcessQueueLabel(files.length);
+      return { invalid, files };
+    }
+
+    async function refreshProcessFiles(keepCard) {
+      const typed = keepCard ? $("processCode").value : "";
+      const { invalid, files } = await peekProcessFiles();
+      if (invalid.length && !(keepCard && queue.name && invalid.every((f) => f.name !== queue.name))) {
+        $("processEmpty").classList.add("hidden");
+        $("processCard").classList.add("hidden");
+        askInvalid(invalid[0]);
+        return;
+      }
+      if (keepCard && queue.name && files.some((f) => f.name === queue.name)) {
+        if (typed) $("processCode").value = typed;
+        $("processCode").focus();
+        return;
+      }
+      await loadProcess();
+      if (keepCard && typed) $("processCode").value = typed;
+    }
+
+    async function loadProcess() {
+      const { invalid, files } = await peekProcessFiles();
+      if (invalid.length) {
+        $("processEmpty").classList.add("hidden");
+        $("processCard").classList.add("hidden");
+        askInvalid(invalid[0]);
+        return;
+      }
+      if (!files.length) {
+        queue = { name: "", doc: null, idx: 0 };
+        $("processEmpty").classList.remove("hidden");
+        $("processCard").classList.add("hidden");
+        return;
+      }
+      const pick = files.find((f) => f.name === queue.name) || files[0];
+      const g = await fetch("/api/file?name=" + encodeURIComponent(pick.name));
+      const body = await g.json();
+      if (!g.ok) {
+        $("processEmpty").classList.remove("hidden");
+        $("processCard").classList.add("hidden");
+        return;
+      }
+      const items = metaOf(body.document).extracted_text;
+      const pending = pendingOf(body.document);
+      const idx = pending.length ? Math.max(0, items.indexOf(pending[0])) : 0;
+      queue = { name: body.name, doc: body.document, idx };
+      $("processEmpty").classList.add("hidden");
+      $("processCard").classList.remove("hidden");
+      renderProcess();
+    }
+
+    async function applyCodeTrim(name, trim) {
+      const r = await fetch("/api/files/clear-codes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, trim }),
+      });
+      const j = await r.json();
+      if (!r.ok) {
+        $("processMsg").textContent = j.error || "修正失敗";
+        $("processMsg").className = "msg bad";
+        return;
+      }
+      await loadProcess();
+    }
+
+    function askInvalid(file) {
+      $("modalText").textContent =
+        `「${file.name}」編碼多於擷取項（擷取 ${file.count}、編碼 ${file.coded}）。請選擇處理方式。`;
+      $("modalOk").textContent = "手動修正";
+      $("modalOk").className = "act";
+      $("modalAlt").textContent = "清除全部編碼";
+      $("modalAlt").classList.remove("hidden");
+      $("modalTrimBegin").classList.remove("hidden");
+      $("modalTrimEnd").classList.remove("hidden");
+      $("modalCancel").classList.add("hidden");
+      $("modal").classList.remove("hidden");
+      modalFn = () => applyCodeTrim(file.name, "extra");
+      modalAltFn = () => applyCodeTrim(file.name, "all");
+      modalBeginFn = () => applyCodeTrim(file.name, "begin");
+      modalEndFn = () => applyCodeTrim(file.name, "end");
+    }
+
+    function renderProcess() {
+      const d = queue.doc;
+      if (!d) return;
+      const m = metaOf(d);
+      const items = m.extracted_text;
+      if (!items.length || isComplete(d)) {
+        finishProcess();
+        return;
+      }
+      if (queue.idx >= items.length) queue.idx = items.length - 1;
+      if (queue.idx < 0) queue.idx = 0;
+      const word = items[queue.idx];
+      $("processFile").textContent = queue.name;
+      $("processWord").textContent = word;
+      $("processProg").textContent = `${queue.idx + 1} / ${items.length}`;
+      $("processCode").value = m.codes[word] !== undefined ? m.codes[word] : "";
+      $("btnProcessPrev").disabled = queue.idx <= 0;
+      $("processCode").focus();
+    }
+
+    async function saveQueueDoc() {
+      const r = await fetch("/api/files/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: queue.name, document: queue.doc }),
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || "儲存失敗");
+      queue.doc = j.document;
+      return j;
+    }
+
+    async function finishProcess() {
+      $("processMsg").textContent = "處理完成，儲存中…";
+      try {
+        const saved = await saveQueueDoc();
+        if (!isComplete(saved.document)) return;
+        if (settings.auto_implement) {
+          const r = await fetch("/api/files/implement", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ names: [queue.name] }),
+          });
+          const j = await r.json();
+          const one = (j.results || [])[0] || {};
+          if (one.error) {
+            $("processMsg").textContent = one.error;
+            $("processMsg").className = "msg bad";
+          } else {
+            $("processMsg").textContent = `已寫入 ${one.count || 0} 條` + redeployNote(j);
+            $("processMsg").className = "msg ok";
+          }
+        }
+      } catch (err) {
+        $("processMsg").textContent = String(err.message || err);
+        $("processMsg").className = "msg bad";
+        return;
+      }
+      queue = { name: "", doc: null, idx: 0 };
+      await loadProcess();
+    }
+
+    async function saveCurrentCode(code) {
+      const d = queue.doc;
+      if (!d) return false;
+      const m = metaOf(d);
+      const word = m.extracted_text[queue.idx];
+      if (!word) return false;
+      m.codes[word] = code;
+      $("processMsg").textContent = "";
+      try {
+        await saveQueueDoc();
+      } catch (err) {
+        $("processMsg").textContent = String(err.message || err);
+        $("processMsg").className = "msg bad";
+        return false;
+      }
+      return true;
+    }
+
+    async function processAdvance() {
+      if (isComplete(queue.doc)) return finishProcess();
+      const n = metaOf(queue.doc).extracted_text.length;
+      if (queue.idx < n - 1) queue.idx += 1;
+      await peekProcessFiles();
+      renderProcess();
+    }
+
+    async function processNext() {
+      const code = $("processCode").value.trim();
+      if (!code) {
+        $("processMsg").textContent = "請輸入編碼";
+        $("processMsg").className = "msg bad";
+        return;
+      }
+      if (!(await saveCurrentCode(code))) return;
+      await processAdvance();
+    }
+
+    async function processSkip() {
+      if (!(await saveCurrentCode(""))) return;
+      await processAdvance();
+    }
+
+    async function processPrev() {
+      if (!queue.doc || queue.idx <= 0) return;
+      const typed = $("processCode").value.trim();
+      if (typed && !(await saveCurrentCode(typed))) return;
+      queue.idx -= 1;
+      $("processMsg").textContent = "";
+      renderProcess();
+    }
+
+    $("btnProcessNext").onclick = processNext;
+    $("btnProcessSkip").onclick = processSkip;
+    $("btnProcessPrev").onclick = processPrev;
+    $("processCode").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        processNext();
+      }
+    });
+    $("processCode").addEventListener("input", () => {
+      clearTimeout(processListTimer);
+      processListTimer = setTimeout(() => refreshProcessFiles(true), 200);
+    });
+    document.querySelectorAll(".js-refresh").forEach((btn) => {
+      btn.onclick = refreshCurrent;
+    });
+
+    async function loadInbox() {
+      const r = await fetch("/api/files?kind=implement");
+      const j = await r.json();
+      const files = j.files || [];
+      $("checkAll").checked = false;
+      $("inboxEmpty").classList.toggle("hidden", files.length > 0);
+      $("inboxBody").innerHTML = files.map((f) =>
+        `<tr>
+          <td><input type="checkbox" class="chk rowchk" data-name="${esc(f.name)}" aria-label="${esc(f.name)}" /></td>
+          <td>${esc(f.name)}</td>
+          <td>${esc(f.source)}</td>
+          <td>${esc(f.date)}</td>
+          <td>${f.coded}/${f.count}</td>
+        </tr>`
+      ).join("");
+    }
+
+    $("checkAll").onchange = () => {
+      document.querySelectorAll(".rowchk").forEach((el) => { el.checked = $("checkAll").checked; });
+    };
+
+    function checkedNames() {
+      return [...document.querySelectorAll(".rowchk:checked")].map((el) => el.dataset.name);
+    }
+
+    $("btnImplement").onclick = async () => {
+      const names = checkedNames();
+      if (!names.length) {
+        $("inboxMsg").textContent = "請先勾選檔案";
+        $("inboxMsg").className = "msg bad";
+        return;
+      }
+      const r = await fetch("/api/files/implement", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ names }),
+      });
+      const j = await r.json();
+      const fail = (j.results || []).filter((x) => x.error);
+      $("inboxMsg").textContent = fail.length
+        ? fail.map((x) => x.error).join("；")
+        : `已寫入 ${names.length} 個檔案` + redeployNote(j);
+      $("inboxMsg").className = fail.length ? "msg bad" : "msg ok";
+      loadInbox();
+    };
+
+    function confirmModal(text, fn) {
+      $("modalText").textContent = text;
+      $("modalOk").textContent = "確定";
+      $("modalOk").className = "danger";
+      $("modalAlt").classList.add("hidden");
+      $("modalTrimBegin").classList.add("hidden");
+      $("modalTrimEnd").classList.add("hidden");
+      $("modalCancel").classList.remove("hidden");
+      $("modal").classList.remove("hidden");
+      modalFn = fn;
+      modalAltFn = null;
+      modalBeginFn = null;
+      modalEndFn = null;
+    }
+    function closeModal() {
+      $("modal").classList.add("hidden");
+      $("modalAlt").classList.add("hidden");
+      $("modalTrimBegin").classList.add("hidden");
+      $("modalTrimEnd").classList.add("hidden");
+      $("modalCancel").classList.remove("hidden");
+      $("modalOk").textContent = "確定";
+      $("modalOk").className = "act";
+    }
+    function clearModalFns() {
+      modalFn = null;
+      modalAltFn = null;
+      modalBeginFn = null;
+      modalEndFn = null;
+    }
+    $("modalCancel").onclick = () => { closeModal(); clearModalFns(); };
+    $("modalOk").onclick = () => {
+      const fn = modalFn;
+      closeModal();
+      clearModalFns();
+      if (fn) fn();
+    };
+    $("modalAlt").onclick = () => {
+      const fn = modalAltFn;
+      closeModal();
+      clearModalFns();
+      if (fn) fn();
+    };
+    $("modalTrimBegin").onclick = () => {
+      const fn = modalBeginFn;
+      closeModal();
+      clearModalFns();
+      if (fn) fn();
+    };
+    $("modalTrimEnd").onclick = () => {
+      const fn = modalEndFn;
+      closeModal();
+      clearModalFns();
+      if (fn) fn();
+    };
+
+    $("btnDelete").onclick = () => {
+      const names = checkedNames();
+      if (!names.length) {
+        $("inboxMsg").textContent = "請先勾選檔案";
+        $("inboxMsg").className = "msg bad";
+        return;
+      }
+      confirmModal(`確定刪除 ${names.length} 個檔案？`, async () => {
+        const r = await fetch("/api/files/delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ names }),
+        });
+        const j = await r.json();
+        $("inboxMsg").textContent = `已刪除 ${j.count || 0} 個檔案`;
+        $("inboxMsg").className = "msg ok";
+        loadInbox();
+      });
+    };
+
+    async function postSettings(payload) {
+      $("settingsMsg").textContent = "儲存中…";
+      $("settingsMsg").className = "msg";
+      const r = await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const j = await r.json();
+      if (!r.ok) {
+        $("settingsMsg").textContent = j.error || "儲存失敗";
+        $("settingsMsg").className = "msg bad";
+        return;
+      }
+      applySettings(j);
+      $("settingsMsg").textContent = "已儲存";
+      $("settingsMsg").className = "msg ok";
+    }
+
+    $("btnSaveDict").onclick = () => postSettings({ dict_path: $("dictPath").value });
+    $("btnDefaultDict").onclick = () => postSettings({ dict_path: settings.default_path });
+    $("btnSaveDir").onclick = () => postSettings({ work_dir: $("workDir").value });
+    $("autoImplement").onchange = () => postSettings({ auto_implement: $("autoImplement").checked });
+    $("autoRedeploy").onchange = () => postSettings({ auto_redeploy: $("autoRedeploy").checked });
+
+    async function pick(url) {
+      $("settingsMsg").textContent = "請選擇…";
+      const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+      const j = await r.json();
+      if (!r.ok) {
+        $("settingsMsg").textContent = j.error || "選檔失敗";
+        $("settingsMsg").className = "msg bad";
+        return;
+      }
+      if (j.cancelled) {
+        $("settingsMsg").textContent = "已取消";
+        $("settingsMsg").className = "msg";
+        return;
+      }
+      applySettings(j);
+      $("settingsMsg").textContent = "已儲存";
+      $("settingsMsg").className = "msg ok";
+    }
+    $("btnBrowseDict").onclick = () => pick("/api/pick-dict");
+    $("btnBrowseDir").onclick = () => pick("/api/pick-dir");
+
+    toForm();
+    loadInfo();
+    setAnalyzeMode("manual");
+  </script>
+</body>
+</html>
