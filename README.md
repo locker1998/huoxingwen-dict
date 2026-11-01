@@ -1,13 +1,15 @@
 # 火星文
 
-Local helper for adding missing 字／詞 to a 小狼毫 table dictionary.
+Desktop app for adding missing 字／詞 to a 小狼毫 table dictionary. It is a native window, not a website.
 
 ```
 copy settings.example.json settings.json
 py -3 app.py
 ```
 
-http://127.0.0.1:8765/
+Ready-to-run build: `dist\火星文\火星文.exe` (rebuild with `py -3 -m PyInstaller huoxingwen.spec`).
+
+Frozen installs keep `settings.json`, `skipped.json`, and the default work folder under `%LOCALAPPDATA%\HuoxingwenDict`.
 
 `settings.json`, `skipped.json`, and work files under `files/` stay local and are not committed. Empty `dict_path` uses `%APPDATA%\Rime\locker.dict.yaml`.
 

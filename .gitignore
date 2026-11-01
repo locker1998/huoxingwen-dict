@@ -6,3 +6,5 @@ settings.json
 skipped.json
 files/*
 !files/.gitkeep
+build/
+dist/

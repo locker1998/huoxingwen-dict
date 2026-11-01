@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 import sys
 import threading
-import webbrowser
 from datetime import date
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -15,19 +15,40 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 from extract import DICT_DEFAULT, extract_missing, load_dict_words
 
-ROOT = Path(__file__).resolve().parent
-STATIC = ROOT / "static"
-SETTINGS_PATH = ROOT / "settings.json"
-SKIPPED_PATH = ROOT / "skipped.json"
 HOST = "127.0.0.1"
 PORT = 8765
 NAME_RE = re.compile(r"[^\w\u3400-\u9fff\-]+", re.UNICODE)
+WINDOW = None
+
+
+def frozen() -> bool:
+    return bool(getattr(sys, "frozen", False))
+
+
+def resource_dir() -> Path:
+    if frozen():
+        return Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent))
+    return Path(__file__).resolve().parent
+
+
+def data_dir() -> Path:
+    if frozen():
+        base = Path(os.environ.get("LOCALAPPDATA") or (Path.home() / "AppData/Local"))
+        path = base / "HuoxingwenDict"
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+    return Path(__file__).resolve().parent
+
+
+STATIC = resource_dir() / "static"
+SETTINGS_PATH = data_dir() / "settings.json"
+SKIPPED_PATH = data_dir() / "skipped.json"
 
 
 def default_settings() -> dict:
     return {
         "dict_path": str(DICT_DEFAULT),
-        "work_dir": str(ROOT / "files"),
+        "work_dir": str(data_dir() / "files"),
         "auto_implement": True,
         "auto_redeploy": True,
     }
@@ -120,7 +141,7 @@ def remember_implement_skips(meta: dict, dpath: Path) -> None:
 
 
 def work_dir() -> Path:
-    path = Path(str(load_settings().get("work_dir") or (ROOT / "files"))).expanduser()
+    path = Path(str(load_settings().get("work_dir") or (data_dir() / "files"))).expanduser()
     path.mkdir(parents=True, exist_ok=True)
     return path
 
@@ -241,7 +262,7 @@ def info_payload() -> dict:
         "pairs": pairs,
         "default_path": str(DICT_DEFAULT),
         "work_dir": str(wd),
-        "default_work_dir": str(ROOT / "files"),
+        "default_work_dir": str(data_dir() / "files"),
         "auto_implement": auto_implement(),
         "auto_redeploy": auto_redeploy(),
         "weasel_deployer": str(find_weasel_deployer() or ""),
@@ -249,6 +270,29 @@ def info_payload() -> dict:
 
 
 def pick_dialog(kind: str) -> str:
+    window = WINDOW
+    if window is not None:
+        import webview
+
+        if kind == "dir":
+            initial = work_dir()
+            chosen = window.create_file_dialog(
+                webview.FileDialog.FOLDER,
+                directory=str(initial) if initial.is_dir() else str(Path.home()),
+            )
+        else:
+            initial = current_dict().parent
+            if not initial.is_dir():
+                initial = DICT_DEFAULT.parent
+            chosen = window.create_file_dialog(
+                webview.FileDialog.OPEN,
+                directory=str(initial) if initial.is_dir() else str(Path.home()),
+                file_types=("Rime 字典 (*.yaml;*.yml)", "文字 (*.txt)", "所有檔案 (*.*)"),
+            )
+        if not chosen:
+            return ""
+        return str(chosen[0]) if isinstance(chosen, (list, tuple)) else str(chosen)
+
     import tkinter as tk
     from tkinter import filedialog
 
@@ -257,7 +301,7 @@ def pick_dialog(kind: str) -> str:
     root.attributes("-topmost", True)
     if kind == "dir":
         initial = work_dir()
-        chosen = filedialog.askdirectory(
+        picked = filedialog.askdirectory(
             parent=root,
             title="工作資料夾",
             initialdir=str(initial) if initial.is_dir() else str(Path.home()),
@@ -266,14 +310,14 @@ def pick_dialog(kind: str) -> str:
         initial = current_dict().parent
         if not initial.is_dir():
             initial = DICT_DEFAULT.parent
-        chosen = filedialog.askopenfilename(
+        picked = filedialog.askopenfilename(
             parent=root,
             title="字典檔",
             initialdir=str(initial) if initial.is_dir() else str(Path.home()),
             filetypes=[("Rime 字典", "*.yaml"), ("YAML", "*.yml"), ("文字", "*.txt"), ("所有檔案", "*.*")],
         )
     root.destroy()
-    return chosen or ""
+    return picked or ""
 
 
 def load_dict_entries(path: Path) -> list[dict]:
@@ -502,7 +546,7 @@ def implement_doc(name: str, doc: dict) -> tuple[dict, list[str]]:
 
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt: str, *args) -> None:
-        sys.stderr.write("%s - %s\n" % (self.address_string(), fmt % args))
+        return
 
     def _send(self, code: int, body: bytes, content_type: str) -> None:
         self.send_response(code)
@@ -776,18 +820,39 @@ class Handler(BaseHTTPRequestHandler):
         self._json(200, {"results": results, **extra})
 
 
-def main() -> None:
-    work_dir()
-    httpd = ThreadingHTTPServer((HOST, PORT), Handler)
-    url = f"http://{HOST}:{PORT}/"
-    print(f"火星文  {url}")
-    print(f"dict  {current_dict()}")
-    print(f"files {work_dir()}")
-    threading.Timer(0.4, lambda: webbrowser.open(url)).start()
+def start_server() -> ThreadingHTTPServer:
     try:
-        httpd.serve_forever()
-    except KeyboardInterrupt:
-        print("\nbye")
+        httpd = ThreadingHTTPServer((HOST, PORT), Handler)
+    except OSError:
+        httpd = ThreadingHTTPServer((HOST, 0), Handler)
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    return httpd
+
+
+def main() -> None:
+    global WINDOW
+    work_dir()
+    try:
+        import webview
+    except ImportError:
+        sys.exit("需要 pywebview：py -3 -m pip install pywebview")
+    httpd = start_server()
+    host, port = httpd.server_address[:2]
+    url = f"http://{host}:{port}/"
+    WINDOW = webview.create_window(
+        "火星文",
+        url,
+        width=1100,
+        height=760,
+        min_size=(800, 560),
+        background_color="#141416",
+        text_select=True,
+    )
+    try:
+        webview.start()
+    finally:
+        httpd.shutdown()
 
 
 if __name__ == "__main__":
